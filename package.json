@@ -1,0 +1,53 @@
+{
+  "name": "@attago/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the AttaGo crypto trading dashboard API",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "node --import tsx --test test/unit/**/*.test.ts",
+    "test:conformance": "node --import tsx --test test/conformance/**/*.test.ts",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "attago",
+    "crypto",
+    "trading",
+    "sdk",
+    "x402",
+    "mcp"
+  ],
+  "author": "AttaGo <collin@attago.io>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AttaGo/attago-js-sdk.git"
+  },
+  "homepage": "https://attago.bid",
+  "bugs": {
+    "url": "https://github.com/AttaGo/attago-js-sdk/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.0",
+    "tsx": "~4.19.0",
+    "ajv": "~8.18.0",
+    "ajv-formats": "~3.0.0"
+  }
+}
