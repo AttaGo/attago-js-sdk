@@ -34,6 +34,7 @@ import {
   type SignUpOptions,
   type X402Signer,
 } from './types.js';
+import { WebhooksModule } from './webhooks.js';
 import { fetchWithX402 } from './x402.js';
 
 export const VERSION = '0.1.0';
@@ -65,6 +66,16 @@ export type {
   X402Signer,
 } from './types.js';
 export {
+  WebhooksModule,
+  buildTestPayload,
+  signPayload,
+  verifySignature,
+  type WebhookCreateResponse,
+  type WebhookListItem,
+  type WebhookTestResult,
+  type SendTestOptions,
+} from './webhooks.js';
+export {
   parsePaymentRequired,
   filterAcceptsByNetwork,
 } from './x402.js';
@@ -95,6 +106,9 @@ export class AttaGoClient {
 
   /** Data access — latest, per-token, and 72h snapshots. */
   readonly data: DataModule;
+
+  /** Webhook management — CRUD, SDK-side and server-side test delivery. */
+  readonly webhooks: WebhooksModule;
 
   /** @internal */ readonly _signer: X402Signer | null;
   private readonly _apiKey: string | null;
@@ -147,6 +161,7 @@ export class AttaGoClient {
     // ── Attach namespace modules ──
     this.agent = new AgentModule(this);
     this.data = new DataModule(this);
+    this.webhooks = new WebhooksModule(this, this._fetch);
   }
 
   // ── Static registration helpers ──────────────────────────────────
@@ -247,12 +262,16 @@ export class AttaGoClient {
     }
 
     // ── Parse response ──
+    if (res.status === 204) {
+      return undefined as unknown as T;
+    }
+
     const contentType = res.headers.get('content-type') ?? '';
     if (contentType.includes('application/json')) {
       return (await res.json()) as T;
     }
 
-    // 204 No Content or non-JSON success
+    // Non-JSON success
     return undefined as unknown as T;
   }
 
