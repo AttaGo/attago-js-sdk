@@ -9,14 +9,18 @@
  * @example
  * ```ts
  * import { AttaGoClient } from '@attago/sdk';
+ *
  * const client = new AttaGoClient({ apiKey: 'ak_live_abc123' });
- * const score = await client.request('GET', '/agent/score', { query: { symbol: 'BTC' } });
+ * const score = await client.agent.getScore('BTC');
+ * console.log(score.composite.signal); // 'GO' | 'NO-GO' | 'NEUTRAL'
  * ```
  *
  * @packageDocumentation
  */
 
+import { AgentModule } from './agent.js';
 import { CognitoAuth } from './auth.js';
+import { DataModule } from './data.js';
 import { ApiError, PaymentRequiredError, RateLimitError } from './errors.js';
 import {
   DEFAULT_BASE_URL,
@@ -30,12 +34,15 @@ import {
   type SignUpOptions,
   type X402Signer,
 } from './types.js';
+import { fetchWithX402 } from './x402.js';
 
 export const VERSION = '0.1.0';
 
 // ── Re-exports ──────────────────────────────────────────────────────
 
+export { AgentModule, type AgentScoreResponse, type AgentDataResponse } from './agent.js';
 export { CognitoAuth } from './auth.js';
+export { DataModule, type DataLatestResponse, type DataTokenResponse, type DataPushResponse } from './data.js';
 export {
   AttaGoError,
   ApiError,
@@ -57,14 +64,18 @@ export type {
   X402PaymentRequirements,
   X402Signer,
 } from './types.js';
+export {
+  parsePaymentRequired,
+  filterAcceptsByNetwork,
+} from './x402.js';
 
 // ── Client ──────────────────────────────────────────────────────────
 
 /**
  * AttaGo API client.
  *
- * Provides authenticated HTTP requests to the AttaGo API. Namespace modules
- * (e.g. `client.agent`, `client.subscriptions`) are attached in later tasks.
+ * Provides authenticated HTTP requests to the AttaGo API with
+ * namespace modules for each endpoint group.
  */
 export class AttaGoClient {
   /** Resolved API base URL (no trailing slash). */
@@ -75,10 +86,15 @@ export class AttaGoClient {
 
   /**
    * Cognito auth manager — only available in `cognito` mode.
-   *
    * Use for explicit sign-in, MFA, sign-out, and token persistence.
    */
   readonly auth: CognitoAuth | null;
+
+  /** Agent endpoints — Go/No-Go scores and full market data. */
+  readonly agent: AgentModule;
+
+  /** Data access — latest, per-token, and 72h snapshots. */
+  readonly data: DataModule;
 
   /** @internal */ readonly _signer: X402Signer | null;
   private readonly _apiKey: string | null;
@@ -127,6 +143,10 @@ export class AttaGoClient {
     } else {
       this.auth = null;
     }
+
+    // ── Attach namespace modules ──
+    this.agent = new AgentModule(this);
+    this.data = new DataModule(this);
   }
 
   // ── Static registration helpers ──────────────────────────────────
@@ -159,6 +179,7 @@ export class AttaGoClient {
    * Make an authenticated API request.
    *
    * The `/v1` prefix is added automatically if not already present.
+   * In x402 signer mode, 402 responses are auto-signed and retried.
    *
    * @typeParam T — Expected response body type.
    * @param method — HTTP method (`GET`, `POST`, `PUT`, `DELETE`).
@@ -166,7 +187,7 @@ export class AttaGoClient {
    * @param options — Body, headers, query params.
    * @returns Parsed JSON response body.
    *
-   * @throws {PaymentRequiredError} on 402 — x402 payment needed.
+   * @throws {PaymentRequiredError} on 402 — x402 payment needed (or signer failed).
    * @throws {RateLimitError} on 429 — rate limit or abuse ban.
    * @throws {ApiError} on other 4xx/5xx responses.
    */
@@ -203,18 +224,23 @@ export class AttaGoClient {
       const token = await this.auth.getIdToken();
       headers['Authorization'] = `Bearer ${token}`;
     }
-    // x402 mode: no auth header — payment handling added in Task 2.3
+    // x402: no auth header — payment signature added by fetchWithX402
 
     if (options.body !== undefined) {
       headers['Content-Type'] = 'application/json';
     }
 
-    // ── Execute ──
-    const res = await this._fetch(url.toString(), {
+    // ── Execute (with x402 auto-retry for signer mode) ──
+    const init: RequestInit = {
       method,
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    });
+    };
+
+    const res =
+      this.authMode === 'x402' && this._signer
+        ? await fetchWithX402(this._fetch, this._signer, url.toString(), init)
+        : await this._fetch(url.toString(), init);
 
     if (!res.ok) {
       return this._handleError(res) as never;
