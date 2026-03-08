@@ -19,9 +19,15 @@
  */
 
 import { AgentModule } from './agent.js';
+import { ApiKeysModule } from './api-keys.js';
 import { CognitoAuth } from './auth.js';
+import { BundlesModule } from './bundles.js';
 import { DataModule } from './data.js';
 import { ApiError, PaymentRequiredError, RateLimitError } from './errors.js';
+import { PaymentsModule } from './payments.js';
+import { PushModule } from './push.js';
+import { RedeemModule } from './redeem.js';
+import { SubscriptionsModule } from './subscriptions.js';
 import {
   DEFAULT_BASE_URL,
   DEFAULT_COGNITO_REGION,
@@ -34,6 +40,7 @@ import {
   type SignUpOptions,
   type X402Signer,
 } from './types.js';
+import { WalletsModule } from './wallets.js';
 import { WebhooksModule } from './webhooks.js';
 import { fetchWithX402 } from './x402.js';
 
@@ -42,7 +49,20 @@ export const VERSION = '0.1.0';
 // ── Re-exports ──────────────────────────────────────────────────────
 
 export { AgentModule, type AgentScoreResponse, type AgentDataResponse } from './agent.js';
+export {
+  ApiKeysModule,
+  type ApiKeyCreateResponse,
+  type ApiKeyListItem,
+} from './api-keys.js';
 export { CognitoAuth } from './auth.js';
+export {
+  BundlesModule,
+  type Bundle,
+  type BundleCatalogEntry,
+  type BundleListResponse,
+  type BundlePurchaseResponse,
+  type PurchaseBundleOptions,
+} from './bundles.js';
 export { DataModule, type DataLatestResponse, type DataTokenResponse, type DataPushResponse } from './data.js';
 export {
   AttaGoError,
@@ -52,6 +72,35 @@ export {
   AuthError,
   MfaRequiredError,
 } from './errors.js';
+export {
+  PaymentsModule,
+  type BillingTier,
+  type BillingCycle,
+  type SubscribeOptions,
+  type SubscribeResponse,
+  type BillingStatus,
+  type UpgradeQuote,
+  type IncludedPushes,
+} from './payments.js';
+export {
+  PushModule,
+  type CreatePushOptions,
+  type PushSubscription,
+  type PushKeys,
+} from './push.js';
+export {
+  RedeemModule,
+  type RedeemResponse,
+} from './redeem.js';
+export {
+  SubscriptionsModule,
+  type Subscription,
+  type SubscriptionCondition,
+  type CatalogResponse,
+  type CatalogMetric,
+  type CreateSubscriptionOptions,
+  type UpdateSubscriptionOptions,
+} from './subscriptions.js';
 export type {
   AuthMode,
   ClientOptions,
@@ -65,6 +114,12 @@ export type {
   X402PaymentRequirements,
   X402Signer,
 } from './types.js';
+export {
+  WalletsModule,
+  type Wallet,
+  type WalletChain,
+  type RegisterWalletOptions,
+} from './wallets.js';
 export {
   WebhooksModule,
   buildTestPayload,
@@ -104,8 +159,29 @@ export class AttaGoClient {
   /** Agent endpoints — Go/No-Go scores and full market data. */
   readonly agent: AgentModule;
 
+  /** API key management — create, list, revoke. */
+  readonly apiKeys: ApiKeysModule;
+
+  /** Prepaid data-push credit bundles. */
+  readonly bundles: BundlesModule;
+
   /** Data access — latest, per-token, and 72h snapshots. */
   readonly data: DataModule;
+
+  /** Subscription billing — subscribe, status, upgrade quotes. */
+  readonly payments: PaymentsModule;
+
+  /** Web Push notification subscriptions. */
+  readonly push: PushModule;
+
+  /** Redemption code activation. */
+  readonly redeem: RedeemModule;
+
+  /** Alert subscription configuration — catalog, CRUD. */
+  readonly subscriptions: SubscriptionsModule;
+
+  /** Verified wallet management — register, list, remove. */
+  readonly wallets: WalletsModule;
 
   /** Webhook management — CRUD, SDK-side and server-side test delivery. */
   readonly webhooks: WebhooksModule;
@@ -160,7 +236,14 @@ export class AttaGoClient {
 
     // ── Attach namespace modules ──
     this.agent = new AgentModule(this);
+    this.apiKeys = new ApiKeysModule(this);
+    this.bundles = new BundlesModule(this);
     this.data = new DataModule(this);
+    this.payments = new PaymentsModule(this);
+    this.push = new PushModule(this);
+    this.redeem = new RedeemModule(this);
+    this.subscriptions = new SubscriptionsModule(this);
+    this.wallets = new WalletsModule(this);
     this.webhooks = new WebhooksModule(this, this._fetch);
   }
 
