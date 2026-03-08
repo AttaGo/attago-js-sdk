@@ -142,6 +142,12 @@ export {
   type SendTestOptions,
 } from './webhooks.js';
 export {
+  WebhookListener,
+  type WebhookPayload,
+  type WebhookListenerOptions,
+  type WebhookListenerEvents,
+} from './webhook-listener.js';
+export {
   parsePaymentRequired,
   filterAcceptsByNetwork,
 } from './x402.js';
