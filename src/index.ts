@@ -24,6 +24,7 @@ import { CognitoAuth } from './auth.js';
 import { BundlesModule } from './bundles.js';
 import { DataModule } from './data.js';
 import { ApiError, PaymentRequiredError, RateLimitError } from './errors.js';
+import { McpModule } from './mcp.js';
 import { PaymentsModule } from './payments.js';
 import { PushModule } from './push.js';
 import { RedeemModule } from './redeem.js';
@@ -64,6 +65,16 @@ export {
   type PurchaseBundleOptions,
 } from './bundles.js';
 export { DataModule, type DataLatestResponse, type DataTokenResponse, type DataPushResponse } from './data.js';
+export {
+  McpModule,
+  McpError,
+  type McpTool,
+  type McpToolCallResult,
+  type McpToolContent,
+  type McpToolListResult,
+  type McpServerInfo,
+  type JsonRpcError,
+} from './mcp.js';
 export {
   AttaGoError,
   ApiError,
@@ -168,6 +179,9 @@ export class AttaGoClient {
   /** Data access — latest, per-token, and 72h snapshots. */
   readonly data: DataModule;
 
+  /** MCP (Model Context Protocol) client — JSON-RPC 2.0 tool calls. */
+  readonly mcp: McpModule;
+
   /** Subscription billing — subscribe, status, upgrade quotes. */
   readonly payments: PaymentsModule;
 
@@ -239,6 +253,7 @@ export class AttaGoClient {
     this.apiKeys = new ApiKeysModule(this);
     this.bundles = new BundlesModule(this);
     this.data = new DataModule(this);
+    this.mcp = new McpModule(this, this._fetch);
     this.payments = new PaymentsModule(this);
     this.push = new PushModule(this);
     this.redeem = new RedeemModule(this);
