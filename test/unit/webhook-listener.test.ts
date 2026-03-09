@@ -86,7 +86,7 @@ describe('WebhookListener', () => {
 
   it('should accept valid signed webhooks', async () => {
     const received: WebhookPayload[] = [];
-    listener = new WebhookListener({ secret: SECRET, port: 14000 });
+    listener = new WebhookListener({ secret: SECRET, port: 0 });
     listener.on('alert', (payload) => received.push(payload));
     await listener.start();
 
@@ -94,7 +94,7 @@ describe('WebhookListener', () => {
     const body = JSON.stringify(payload);
     const sig = signBody(body);
 
-    const res = await sendWebhook(14000, body, sig);
+    const res = await sendWebhook(listener.actualPort, body, sig);
     assert.equal(res.status, 200);
 
     const json = await res.json();
@@ -107,7 +107,7 @@ describe('WebhookListener', () => {
   it('should emit test event for test deliveries', async () => {
     const alerts: WebhookPayload[] = [];
     const tests: WebhookPayload[] = [];
-    listener = new WebhookListener({ secret: SECRET, port: 14001 });
+    listener = new WebhookListener({ secret: SECRET, port: 0 });
     listener.on('alert', (p) => alerts.push(p));
     listener.on('test', (p) => tests.push(p));
     await listener.start();
@@ -116,7 +116,7 @@ describe('WebhookListener', () => {
     const body = JSON.stringify(payload);
     const sig = signBody(body);
 
-    const res = await sendWebhook(14001, body, sig);
+    const res = await sendWebhook(listener.actualPort, body, sig);
     assert.equal(res.status, 200);
     assert.equal(alerts.length, 0); // Not an alert
     assert.equal(tests.length, 1);
@@ -124,11 +124,11 @@ describe('WebhookListener', () => {
   });
 
   it('should reject missing signature with 401', async () => {
-    listener = new WebhookListener({ secret: SECRET, port: 14002 });
+    listener = new WebhookListener({ secret: SECRET, port: 0 });
     await listener.start();
 
     const body = JSON.stringify(makePayload());
-    const res = await sendWebhook(14002, body); // No signature
+    const res = await sendWebhook(listener.actualPort, body); // No signature
 
     assert.equal(res.status, 401);
     const json = await res.json();
@@ -136,52 +136,52 @@ describe('WebhookListener', () => {
   });
 
   it('should reject invalid signature with 401', async () => {
-    listener = new WebhookListener({ secret: SECRET, port: 14003 });
+    listener = new WebhookListener({ secret: SECRET, port: 0 });
     await listener.start();
 
     const body = JSON.stringify(makePayload());
-    const res = await sendWebhook(14003, body, 'a'.repeat(64));
+    const res = await sendWebhook(listener.actualPort, body, 'a'.repeat(64));
 
     assert.equal(res.status, 401);
   });
 
   it('should reject wrong secret signature with 401', async () => {
-    listener = new WebhookListener({ secret: SECRET, port: 14004 });
+    listener = new WebhookListener({ secret: SECRET, port: 0 });
     await listener.start();
 
     const body = JSON.stringify(makePayload());
     const wrongSig = createHmac('sha256', 'wrong-secret').update(body).digest('hex');
-    const res = await sendWebhook(14004, body, wrongSig);
+    const res = await sendWebhook(listener.actualPort, body, wrongSig);
 
     assert.equal(res.status, 401);
   });
 
   it('should return 404 for wrong path', async () => {
-    listener = new WebhookListener({ secret: SECRET, port: 14005 });
+    listener = new WebhookListener({ secret: SECRET, port: 0 });
     await listener.start();
 
     const body = JSON.stringify(makePayload());
     const sig = signBody(body);
-    const res = await sendWebhook(14005, body, sig, '/wrong-path');
+    const res = await sendWebhook(listener.actualPort, body, sig, '/wrong-path');
 
     assert.equal(res.status, 404);
   });
 
   it('should support custom path', async () => {
-    listener = new WebhookListener({ secret: SECRET, port: 14006, path: '/hooks/attago' });
+    listener = new WebhookListener({ secret: SECRET, port: 0, path: '/hooks/attago' });
     await listener.start();
 
     const payload = makePayload();
     const body = JSON.stringify(payload);
     const sig = signBody(body);
 
-    const res = await sendWebhook(14006, body, sig, '/hooks/attago');
+    const res = await sendWebhook(listener.actualPort, body, sig, '/hooks/attago');
     assert.equal(res.status, 200);
   });
 
   it('should emit error for handler exceptions', async () => {
     const errors: Error[] = [];
-    listener = new WebhookListener({ secret: SECRET, port: 14007 });
+    listener = new WebhookListener({ secret: SECRET, port: 0 });
     listener.on('alert', () => { throw new Error('handler crash'); });
     listener.on('error', (err) => errors.push(err));
     await listener.start();
@@ -190,7 +190,7 @@ describe('WebhookListener', () => {
     const sig = signBody(body);
 
     // Should still return 200 (delivery acknowledged)
-    const res = await sendWebhook(14007, body, sig);
+    const res = await sendWebhook(listener.actualPort, body, sig);
     assert.equal(res.status, 200);
     assert.equal(errors.length, 1);
     assert.equal(errors[0]!.message, 'handler crash');

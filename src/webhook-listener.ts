@@ -64,6 +64,8 @@ export interface WebhookListenerOptions {
   host?: string;
   /** HTTP path to accept webhooks on. @defaultValue '/webhook' */
   path?: string;
+  /** Maximum request body size in bytes. @defaultValue 1_048_576 (1 MB) */
+  maxBodySize?: number;
 }
 
 /** Event types emitted by the listener. */
@@ -82,6 +84,7 @@ export class WebhookListener {
   readonly host: string;
   readonly path: string;
   private readonly _secret: string;
+  private readonly _maxBodySize: number;
   private _server: Server | null = null;
   private readonly _handlers: {
     [K in EventName]: Array<WebhookListenerEvents[K]>;
@@ -96,6 +99,7 @@ export class WebhookListener {
     this.port = options.port ?? 4000;
     this.host = options.host ?? '0.0.0.0';
     this.path = options.path ?? '/webhook';
+    this._maxBodySize = options.maxBodySize ?? 1_048_576; // 1 MB
   }
 
   /**
@@ -162,6 +166,20 @@ export class WebhookListener {
     return this._server !== null && this._server.listening;
   }
 
+  /**
+   * The actual port the server is bound to.
+   *
+   * Useful when constructed with `port: 0` (OS-assigned).
+   * Falls back to the configured port if the server is not yet listening.
+   */
+  get actualPort(): number {
+    const addr = this._server?.address();
+    if (addr && typeof addr === 'object') {
+      return addr.port;
+    }
+    return this.port;
+  }
+
   // ── Internals ───────────────────────────────────────────────────
 
   /** @internal */
@@ -174,8 +192,21 @@ export class WebhookListener {
     }
 
     const chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    let totalSize = 0;
+    let destroyed = false;
+    req.on('data', (chunk: Buffer) => {
+      totalSize += chunk.length;
+      if (totalSize > this._maxBodySize) {
+        destroyed = true;
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Payload too large' }));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on('end', () => {
+      if (destroyed) return;
       try {
         const rawBody = Buffer.concat(chunks);
         const signature = req.headers['x-attago-signature'] as string | undefined;

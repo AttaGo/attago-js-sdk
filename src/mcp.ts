@@ -11,6 +11,7 @@
  */
 
 import type { AttaGoClient } from './index.js';
+import { AttaGoError } from './errors.js';
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -82,7 +83,7 @@ export interface McpToolCallResult {
 }
 
 /** Custom error for MCP JSON-RPC errors. */
-export class McpError extends Error {
+export class McpError extends AttaGoError {
   readonly code: number;
   readonly data: unknown;
 
@@ -190,19 +191,14 @@ export class McpModule {
     const baseUrl = this._client.baseUrl;
     const url = `${baseUrl}/v1/mcp`;
 
-    // Build auth headers
+    // Build auth headers via the client's shared helper (no unsafe casts)
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     };
 
-    if (this._client.authMode === 'apikey') {
-      const apiKey = (this._client as unknown as { _apiKey: string | null })._apiKey;
-      if (apiKey) headers['X-API-Key'] = apiKey;
-    } else if (this._client.authMode === 'cognito' && this._client.auth) {
-      const token = await this._client.auth.getIdToken();
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    const authHeaders = await this._client._buildAuthHeaders();
+    Object.assign(headers, authHeaders);
 
     const init: RequestInit = {
       method: 'POST',

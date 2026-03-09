@@ -334,16 +334,12 @@ export class AttaGoClient {
     // ── Build headers ──
     const headers: Record<string, string> = {
       Accept: 'application/json',
+      'User-Agent': `attago-js/${VERSION}`,
       ...options.headers,
     };
 
-    if (this.authMode === 'apikey' && this._apiKey) {
-      headers['X-API-Key'] = this._apiKey;
-    } else if (this.authMode === 'cognito' && this.auth) {
-      const token = await this.auth.getIdToken();
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    // x402: no auth header — payment signature added by fetchWithX402
+    // Apply auth headers (apikey or cognito — x402 uses payment signature instead)
+    Object.assign(headers, await this._buildAuthHeaders());
 
     if (options.body !== undefined) {
       headers['Content-Type'] = 'application/json';
@@ -377,6 +373,26 @@ export class AttaGoClient {
 
     // Non-JSON success
     return undefined as unknown as T;
+  }
+
+  // ── Auth headers ─────────────────────────────────────────────────
+
+  /**
+   * Build authentication headers for the current auth mode.
+   *
+   * Used by `request()` and `McpModule._rpc()` to avoid duplicating
+   * auth-header construction logic.
+   *
+   * @internal
+   */
+  async _buildAuthHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {};
+    if (this.authMode === 'apikey' && this._apiKey) {
+      headers['X-API-Key'] = this._apiKey;
+    } else if (this.authMode === 'cognito' && this.auth) {
+      headers['Authorization'] = `Bearer ${await this.auth.getIdToken()}`;
+    }
+    return headers;
   }
 
   // ── Error handling ───────────────────────────────────────────────
