@@ -1,5 +1,9 @@
 # @attago/sdk
 
+[![CI](https://github.com/AttaGo/attago-js-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/AttaGo/attago-js-sdk/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@attago/sdk)](https://www.npmjs.com/package/@attago/sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 TypeScript SDK for the [AttaGo](https://attago.bid) crypto trading dashboard API.
 
 Zero runtime dependencies. Node.js 22+ required.
