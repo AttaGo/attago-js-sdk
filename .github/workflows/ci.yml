@@ -39,5 +39,5 @@ jobs:
         env:
           ATTAGO_BASE_URL: ${{ secrets.ATTAGO_DEV_BASE_URL }}
           ATTAGO_API_KEY: ${{ secrets.ATTAGO_DEV_API_KEY }}
-          ATTAGO_SPEC_PATH: ./attago-spec
+          ATTAGO_SPEC_DIR: ./attago-spec
         run: npm run test:conformance

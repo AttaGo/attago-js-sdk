@@ -19,7 +19,7 @@
   "scripts": {
     "build": "tsc",
     "test": "node --import tsx --test test/unit/**/*.test.ts",
-    "test:conformance": "node --import tsx --test test/conformance/**/*.test.ts",
+    "test:conformance": "node --import tsx --test test/conformance/runner.ts",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
