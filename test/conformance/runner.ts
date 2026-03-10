@@ -103,8 +103,10 @@ describe('Conformance', () => {
       it(`${fixture.description} (${file})`, async () => {
         if (!BASE_URL) return; // Guard for test runner
 
-        // Build URL
-        const url = new URL(fixture.request.path, BASE_URL);
+        // Build URL — concatenate to preserve base path (e.g. API Gateway stage prefix)
+        // new URL(path, base) strips base path when path starts with '/'
+        const base = BASE_URL!.replace(/\/$/, '');
+        const url = new URL(base + fixture.request.path);
         if (fixture.request.query) {
           for (const [k, v] of Object.entries(fixture.request.query)) {
             url.searchParams.set(k, v);
