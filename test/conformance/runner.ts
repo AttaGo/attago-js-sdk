@@ -134,12 +134,15 @@ describe('Conformance', () => {
 
         const res = await fetch(url.toString(), init);
 
-        // Validate status code
-        assert.equal(
-          res.status,
-          fixture.response.status,
-          `Expected status ${fixture.response.status}, got ${res.status}`,
-        );
+        // Validate status code — include response body in error for debugging
+        if (res.status !== fixture.response.status) {
+          const body = await res.text();
+          assert.equal(
+            res.status,
+            fixture.response.status,
+            `Expected status ${fixture.response.status}, got ${res.status}\nbody: ${body}`,
+          );
+        }
 
         // Validate schema if specified
         if (fixture.response.schema && res.status < 400) {
