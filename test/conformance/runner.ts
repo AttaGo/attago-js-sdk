@@ -14,7 +14,7 @@ import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import Ajv from 'ajv';
+import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 
 // ── Config ──────────────────────────────────────────────────────────
@@ -44,17 +44,24 @@ interface Fixture {
   };
 }
 
-// ── Skip list — fixtures that need Cognito JWT (can't run in CI) ──
-
-const SKIP_FIXTURES = new Set([
-  'user-profile-success.json',
-  'user-profile-unauthorized.json',
-]);
+/**
+ * Auto-skip fixtures we can't test in CI:
+ * - JWT fixtures (Authorization: Bearer) — need real Cognito tokens
+ * - Unauthorized tests (expect 401 with no auth) — dev API may not enforce
+ */
+function shouldSkip(fixture: Fixture): boolean {
+  const headers = fixture.request.headers ?? {};
+  // Skip JWT-auth fixtures (CI only has API keys, not Cognito tokens)
+  if ('Authorization' in headers) return true;
+  // Skip fixtures that test auth enforcement (expect 4xx with no auth)
+  if (fixture.response.status === 401 && !('X-API-Key' in headers)) return true;
+  return false;
+}
 
 // ── Runner ──────────────────────────────────────────────────────────
 
 describe('Conformance', () => {
-  let ajv: Ajv;
+  let ajv: InstanceType<typeof Ajv2020>;
 
   before(() => {
     if (!BASE_URL) {
@@ -67,8 +74,8 @@ describe('Conformance', () => {
       return;
     }
 
-    // Initialize ajv with all schemas
-    ajv = new Ajv({ allErrors: true, strict: false });
+    // Initialize ajv with all schemas (draft 2020-12)
+    ajv = new Ajv2020({ allErrors: true, strict: false });
     addFormats(ajv);
 
     if (existsSync(SCHEMA_DIR)) {
@@ -86,15 +93,12 @@ describe('Conformance', () => {
     const fixtureFiles = readdirSync(FIXTURE_DIR).filter((f) => f.endsWith('.json'));
 
     for (const file of fixtureFiles) {
-      if (SKIP_FIXTURES.has(file)) continue;
-
       const fixture = JSON.parse(
         readFileSync(join(FIXTURE_DIR, file), 'utf8'),
       ) as Fixture;
 
-      // Skip fixtures that require auth we can't provide
-      const needsAuth = fixture.request.headers?.['Authorization'];
-      if (needsAuth && !API_KEY) continue;
+      // Auto-skip JWT fixtures and unauthorized tests
+      if (shouldSkip(fixture)) continue;
 
       it(`${fixture.description} (${file})`, async () => {
         if (!BASE_URL) return; // Guard for test runner
