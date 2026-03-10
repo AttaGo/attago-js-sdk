@@ -35,7 +35,7 @@ jobs:
         run: npm test
 
       - name: Conformance tests
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         env:
           ATTAGO_BASE_URL: ${{ secrets.ATTAGO_DEV_BASE_URL }}
           ATTAGO_API_KEY: ${{ secrets.ATTAGO_DEV_API_KEY }}
