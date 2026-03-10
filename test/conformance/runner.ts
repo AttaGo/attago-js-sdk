@@ -89,7 +89,7 @@ describe('Conformance', () => {
   });
 
   // Load and register all fixtures
-  if (BASE_URL && existsSync(FIXTURE_DIR)) {
+  if (BASE_URL && API_KEY && existsSync(FIXTURE_DIR)) {
     const fixtureFiles = readdirSync(FIXTURE_DIR).filter((f) => f.endsWith('.json'));
 
     for (const file of fixtureFiles) {
@@ -161,7 +161,7 @@ describe('Conformance', () => {
       });
     }
   } else {
-    it('skipped — ATTAGO_BASE_URL not set or fixtures not found', () => {
+    it('skipped — ATTAGO_BASE_URL/API_KEY not set or fixtures not found', () => {
       // Placeholder so the suite isn't empty
     });
   }
