@@ -13,7 +13,6 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "LICENSE",
     "README.md"
   ],
   "scripts": {
@@ -32,7 +31,6 @@
     "mcp"
   ],
   "author": "AttaGo <collin@attago.io>",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/AttaGo/attago-js-sdk.git"
