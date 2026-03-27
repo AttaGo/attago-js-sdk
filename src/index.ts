@@ -24,6 +24,7 @@ import { CognitoAuth } from './auth.js';
 import { BundlesModule } from './bundles.js';
 import { DataModule } from './data.js';
 import { ApiError, PaymentRequiredError, RateLimitError } from './errors.js';
+import { MessagingModule } from './messaging.js';
 import { McpModule } from './mcp.js';
 import { PaymentsModule } from './payments.js';
 import { PushModule } from './push.js';
@@ -75,6 +76,12 @@ export {
   type McpServerInfo,
   type JsonRpcError,
 } from './mcp.js';
+export {
+  MessagingModule,
+  type MessagingLink,
+  type MessagingLinkList,
+  type MessagingTestResult,
+} from './messaging.js';
 export {
   AttaGoError,
   ApiError,
@@ -185,6 +192,9 @@ export class AttaGoClient {
   /** Data access — latest, per-token, and 72h snapshots. */
   readonly data: DataModule;
 
+  /** Messaging platform management — link, unlink, test delivery. */
+  readonly messaging: MessagingModule;
+
   /** MCP (Model Context Protocol) client — JSON-RPC 2.0 tool calls. */
   readonly mcp: McpModule;
 
@@ -259,6 +269,7 @@ export class AttaGoClient {
     this.apiKeys = new ApiKeysModule(this);
     this.bundles = new BundlesModule(this);
     this.data = new DataModule(this);
+    this.messaging = new MessagingModule(this);
     this.mcp = new McpModule(this, this._fetch);
     this.payments = new PaymentsModule(this);
     this.push = new PushModule(this);
