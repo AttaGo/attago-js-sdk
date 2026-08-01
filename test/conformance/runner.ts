@@ -30,6 +30,7 @@ const SCHEMA_DIR = join(SPEC_DIR, 'spec', 'schema');
 
 interface Fixture {
   description: string;
+  requiresSetup?: boolean;
   request: {
     method: string;
     path: string;
@@ -46,11 +47,15 @@ interface Fixture {
 
 /**
  * Auto-skip fixtures we can't test in CI:
+ * - requiresSetup fixtures — need live resources provisioned first (the
+ *   go/py/rb runners already skip these; placeholder ids 404 otherwise)
  * - JWT fixtures (Authorization: Bearer) — need real Cognito tokens
  * - Unauthorized tests (expect 401 with no auth) — dev API may not enforce
  */
 function shouldSkip(fixture: Fixture): boolean {
   const headers = fixture.request.headers ?? {};
+  // Skip fixtures that need pre-provisioned live resources
+  if (fixture.requiresSetup) return true;
   // Skip JWT-auth fixtures (CI only has API keys, not Cognito tokens)
   if ('Authorization' in headers) return true;
   // Skip fixtures that test auth enforcement (expect 4xx with no auth)
